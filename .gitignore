@@ -1,0 +1,9 @@
+# the real vault: encrypted, but it should still never be published
+vault.json
+*.json.tmp
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
