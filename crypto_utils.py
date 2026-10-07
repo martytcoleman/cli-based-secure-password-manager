@@ -1,6 +1,7 @@
 """crypto helpers - turning the master password into a key, and locking/unlocking the vault"""
 
 import base64
+import hmac
 import json
 import os
 
@@ -28,6 +29,17 @@ def derive_key(password: str, salt: bytes, iterations: int = ITERATIONS) -> byte
     raw_key = kdf.derive(password.encode("utf-8"))
     # fernet expects the key as url-safe base64 text. this is just encoding, not encryption
     return base64.urlsafe_b64encode(raw_key)
+
+
+def make_verifier(password: str, salt: bytes, iterations: int = ITERATIONS) -> bytes:
+    """the value saved for login checks. same pbkdf2 as the key but its own salt,
+    so knowing it tells you nothing about the key"""
+    return derive_key(password, salt, iterations)
+
+
+def check_verifier(password: str, salt: bytes, stored: bytes, iterations: int = ITERATIONS) -> bool:
+    """redo the derivation and compare in constant time so timing can't leak anything"""
+    return hmac.compare_digest(make_verifier(password, salt, iterations), stored)
 
 
 def encrypt_vault(entries: dict, key: bytes) -> str:
