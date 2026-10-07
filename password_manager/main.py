@@ -5,6 +5,7 @@ from getpass import getpass
 
 from auth import MIN_PASSWORD_LENGTH, VaultTampered, WrongPassword, login, register
 from crypto_utils import encrypt_vault
+from generator import DEFAULT_LENGTH, MIN_LENGTH, generate_password
 from storage import StorageCorrupted, load_record, save_record, vault_exists
 from vault import (
     EntryExists,
@@ -82,6 +83,13 @@ def pick_account(entries):
     return matches[int(choice) - 1]
 
 
+def new_generated_password():
+    length = input(f"length (blank for {DEFAULT_LENGTH}, min {MIN_LENGTH}): ").strip()
+    if length and not length.isdigit():
+        raise ValueError("length has to be a number")
+    return generate_password(int(length) if length else DEFAULT_LENGTH)
+
+
 def show_accounts(matches):
     if not matches:
         print("nothing found.")
@@ -98,9 +106,13 @@ def main():
         try:
             if choice == "1":
                 service, username = input("site: "), input("username: ")
-                add_entry(entries, service, username, getpass("password (hidden): "))
+                typed = getpass("password (hidden, blank to generate one): ")
+                password = typed or new_generated_password()
+                add_entry(entries, service, username, password)
                 save(record, entries, key)
                 print("saved.")
+                if not typed:
+                    print(f"generated password: {password}")  # shown once so i can paste it into the site
 
             elif choice == "2":
                 print("password:", get_password(entries, *pick_account(entries)))
@@ -111,10 +123,15 @@ def main():
             elif choice == "4":
                 service, username = pick_account(entries)
                 new_username = input("new username (blank keeps it): ")
-                new_password = getpass("new password (hidden, blank keeps it): ")
+                new_password = getpass("new password (hidden, blank keeps it, g to generate): ")
+                generated = new_password == "g"
+                if generated:
+                    new_password = new_generated_password()
                 edit_entry(entries, service, username, new_username, new_password)
                 save(record, entries, key)
                 print("updated.")
+                if generated:
+                    print(f"generated password: {new_password}")
 
             elif choice == "5":
                 service, username = pick_account(entries)
