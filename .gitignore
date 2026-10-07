@@ -1,5 +1,5 @@
 # the real vault: encrypted, but it should still never be published
-vault.json
+storage.json
 *.json.tmp
 
 # Python
