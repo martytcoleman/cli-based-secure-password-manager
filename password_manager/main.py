@@ -3,6 +3,7 @@
 import sys
 from getpass import getpass
 
+import ui
 from auth import MIN_PASSWORD_LENGTH, VaultTampered, WrongPassword, login, register
 from crypto_utils import encrypt_vault
 from generator import DEFAULT_LENGTH, MIN_LENGTH, generate_password
@@ -19,28 +20,31 @@ from vault import (
 
 MAX_LOGIN_ATTEMPTS = 3
 
-MENU = """
-1) add       2) get password    3) search
-4) edit      5) delete          6) list all
-q) quit"""
+
+def quit_with_error(msg):
+    ui.error(msg)
+    sys.exit(1)
 
 
 def first_time_setup():
     print("no vault yet, let's make one.")
     print(f"pick a master password, at least {MIN_PASSWORD_LENGTH} characters.")
-    print("there's no way to recover it if you forget it.\n")
+    ui.warn("there's no way to recover it if you forget it.")
+    print()
     while True:
         password = getpass("master password: ")
         if getpass("type it again: ") != password:
-            print("those didn't match, try again.\n")
+            ui.error("those didn't match, try again.")
+            print()
             continue
         try:
             record, key = register(password)
         except ValueError as e:
-            print(f"{e}\n")
+            ui.error(str(e))
+            print()
             continue
         save_record(record)
-        print("vault created.")
+        ui.success("vault created.")
         return record, {}, key
 
 
@@ -48,19 +52,19 @@ def unlock():
     try:
         record = load_record()
     except StorageCorrupted as e:
-        sys.exit(f"can't read the vault: {e}")
+        quit_with_error(f"can't read the vault: {e}")
 
     for _ in range(MAX_LOGIN_ATTEMPTS):
         try:
             entries, key = login(getpass("master password: "), record)
-            print("unlocked.")
+            ui.success("unlocked.")
             return record, entries, key
         except WrongPassword:
-            print("wrong password.")
+            ui.error("wrong password.")
         except VaultTampered:
             # leave the file exactly as it is so nothing gets overwritten
-            sys.exit("password is right but the vault won't decrypt - storage.json was changed or corrupted.")
-    sys.exit("too many wrong attempts.")
+            quit_with_error("password is right but the vault won't decrypt - storage.json was changed or corrupted.")
+    quit_with_error("too many wrong attempts.")
 
 
 def save(record, entries, key):
@@ -75,8 +79,7 @@ def pick_account(entries):
         raise EntryNotFound("nothing matches that")
     if len(matches) == 1:
         return matches[0]
-    for n, (service, username) in enumerate(matches, start=1):
-        print(f"  {n}) {service:25} {username}")
+    ui.accounts(matches, numbered=True)
     choice = input("which one? ")
     if not choice.isdigit() or not 1 <= int(choice) <= len(matches):
         raise ValueError("pick one of the numbers")
@@ -90,18 +93,17 @@ def new_generated_password():
     return generate_password(int(length) if length else DEFAULT_LENGTH)
 
 
-def show_accounts(matches):
-    if not matches:
-        print("nothing found.")
-    for service, username in matches:
-        print(f"  {service:25} {username}")
+def warn_if_short(password):
+    """typed passwords aren't blocked (old accounts, sites with limits) but i still get a nudge"""
+    if len(password) < MIN_LENGTH:
+        ui.warn(f"heads up: that's only {len(password)} characters. a generated one would be much stronger.")
 
 
 def main():
     record, entries, key = unlock() if vault_exists() else first_time_setup()
 
     while True:
-        print(MENU)
+        ui.menu()
         choice = input("> ").strip().lower()
         try:
             if choice == "1":
@@ -110,15 +112,17 @@ def main():
                 password = typed or new_generated_password()
                 add_entry(entries, service, username, password)
                 save(record, entries, key)
-                print("saved.")
+                ui.success("saved.")
                 if not typed:
-                    print(f"generated password: {password}")  # shown once so i can paste it into the site
+                    ui.secret("generated password", password)  # shown once so i can paste it into the site
+                else:
+                    warn_if_short(typed)
 
             elif choice == "2":
-                print("password:", get_password(entries, *pick_account(entries)))
+                ui.secret("password", get_password(entries, *pick_account(entries)))
 
             elif choice == "3":
-                show_accounts(search(entries, input("search sites for: ")))
+                ui.accounts(search(entries, input("search sites for: ")))
 
             elif choice == "4":
                 service, username = pick_account(entries)
@@ -129,28 +133,30 @@ def main():
                     new_password = new_generated_password()
                 edit_entry(entries, service, username, new_username, new_password)
                 save(record, entries, key)
-                print("updated.")
+                ui.success("updated.")
                 if generated:
-                    print(f"generated password: {new_password}")
+                    ui.secret("generated password", new_password)
+                elif new_password:
+                    warn_if_short(new_password)
 
             elif choice == "5":
                 service, username = pick_account(entries)
-                if input(f"delete {username} @ {service}? type yes: ") == "yes":
+                if input(ui.style(f"delete {username} @ {service}? type yes: ", ui.YELLOW)) == "yes":
                     delete_entry(entries, service, username)
                     save(record, entries, key)
-                    print("deleted.")
+                    ui.success("deleted.")
 
             elif choice == "6":
-                show_accounts(search(entries))
+                ui.accounts(search(entries))
 
             elif choice == "q":
                 break
 
             else:
-                print("pick one of the options.")
+                ui.error("pick one of the options.")
 
         except (EntryExists, EntryNotFound, ValueError) as e:
-            print(e)
+            ui.error(str(e))
 
     print("locked. bye.")
 
