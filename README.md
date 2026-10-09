@@ -13,7 +13,7 @@ A command-line password manager I built for COSC 55 (Security and Privacy). Ever
 
 **Bonus**
 
-- Random password generator. Leave the password blank when adding (or type `g` when editing) and it makes a 20-character one
+- Random password generator. Leave the password blank when adding (or type `g` when editing) and it makes one for you, 20 characters by default
 
 **Extra usability stuff**
 
