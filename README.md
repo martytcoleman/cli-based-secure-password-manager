@@ -170,7 +170,7 @@ python -m pytest -v
 - a wrong password, an edited vault, a swapped-in verifier and lowered iterations all get rejected
 - a fake disk crash in the middle of a save leaves the old vault untouched
 - the saved file is exactly `600` and never contains the master password
-- the generator always includes every character type, never repeats, and isn't using `random`
+- the generator always includes every character type, gave 1,000 passwords in a row with no duplicates, and isn't using `random`
 
 
 
