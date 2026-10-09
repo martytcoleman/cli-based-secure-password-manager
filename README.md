@@ -161,7 +161,7 @@ cd password_manager
 python -m pytest -v
 ```
 
-47 tests, takes about 5 seconds (the PBKDF2 ones are slow on purpose). Some of the more interesting ones:
+48 tests, takes about 5 seconds (the PBKDF2 ones are slow on purpose). Some of the more interesting ones:
 
 - a wrong password, an edited vault, a swapped-in verifier and lowered iterations all get rejected
 - a fake disk crash in the middle of a save leaves the old vault untouched
@@ -176,4 +176,8 @@ python -m pytest -v
 - Changing the master password (new salts, re-encrypt, atomic save)
 - Rejecting master passwords from a list of common passwords
 - Covering the salts, iterations and verifier with an HMAC too, so tampering with them is reported as tampering instead of a wrong password
+
+## AI Tooling Disclosure
+
+I used Claude Code to brainstorm test cases, identify potential weaknesses in my code, assist with the implementation of the colorful terminal UI, and clarify concepts and design decisions through discussion. I understand the AI-assisted work and can explain its functionality and design.
 
