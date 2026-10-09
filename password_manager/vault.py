@@ -20,12 +20,18 @@ def _require(**fields):
             raise ValueError(f"{name} can't be empty")
 
 
-def add_entry(entries: dict, service: str, username: str, password: str) -> None:
+def check_can_add(entries: dict, service: str, username: str) -> None:
+    """complain about a blank or duplicate account before i bother typing a password"""
     service = normalize(service)
-    _require(service=service, username=username, password=password)
+    _require(service=service, username=username)
     if username in entries.get(service, {}):
         raise EntryExists(f"{username} @ {service} already exists, edit it instead")
-    entries.setdefault(service, {})[username] = password
+
+
+def add_entry(entries: dict, service: str, username: str, password: str) -> None:
+    check_can_add(entries, service, username)
+    _require(password=password)
+    entries.setdefault(normalize(service), {})[username] = password
 
 
 def get_password(entries: dict, service: str, username: str) -> str:

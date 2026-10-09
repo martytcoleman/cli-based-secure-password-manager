@@ -12,6 +12,7 @@ from vault import (
     EntryExists,
     EntryNotFound,
     add_entry,
+    check_can_add,
     delete_entry,
     edit_entry,
     get_password,
@@ -19,6 +20,10 @@ from vault import (
 )
 
 MAX_LOGIN_ATTEMPTS = 3
+
+
+class Cancelled(Exception):
+    """i backed out of picking an account, not an error"""
 
 
 def quit_with_error(msg):
@@ -74,13 +79,20 @@ def save(record, entries, key):
 
 def pick_account(entries):
     """list matching accounts by number and let me pick one, so i never have to type a username"""
-    matches = search(entries, input("site (blank for all): "))
+    if not entries:
+        # "nothing matches that" sounded like my search was wrong when there's just nothing in here
+        raise EntryNotFound("your vault is empty, add something first")
+    # "blank for all" read like "delete all" in the delete flow, so make it obvious this is just a filter
+    matches = search(entries, input("filter by site (blank to list all): "))
     if not matches:
         raise EntryNotFound("nothing matches that")
     if len(matches) == 1:
+        ui.accounts(matches)  # still show which one got picked, so i know what i'm editing
         return matches[0]
     ui.accounts(matches, numbered=True)
-    choice = input("which one? ")
+    choice = input("which one? (number, blank to cancel) ").strip().lower()
+    if choice in ("", "q"):
+        raise Cancelled  # backing out is a normal choice, not a mistake
     if not choice.isdigit() or not 1 <= int(choice) <= len(matches):
         raise ValueError("pick one of the numbers")
     return matches[int(choice) - 1]
@@ -108,6 +120,7 @@ def main():
         try:
             if choice == "1":
                 service, username = input("site: "), input("username: ")
+                check_can_add(entries, service, username)  # catch blanks and duplicates now, not after the password
                 typed = getpass("password (hidden, blank to generate one): ")
                 password = typed or new_generated_password()
                 add_entry(entries, service, username, password)
@@ -128,6 +141,10 @@ def main():
                 service, username = pick_account(entries)
                 new_username = input("new username (blank keeps it): ")
                 new_password = getpass("new password (hidden, blank keeps it, g to generate): ")
+                if new_username in ("", username) and not new_password:
+                    # used to say "updated." here even though nothing changed. no point re-saving the same vault
+                    print("nothing changed.")
+                    continue
                 generated = new_password == "g"
                 if generated:
                     new_password = new_generated_password()
@@ -141,10 +158,13 @@ def main():
 
             elif choice == "5":
                 service, username = pick_account(entries)
-                if input(ui.style(f"delete {username} @ {service}? type yes: ", ui.YELLOW)) == "yes":
+                # "Yes" or "yes " still count, but it has to be the whole word so a stray "y" can't delete anything
+                if input(ui.style(f"delete {username} @ {service}? type yes: ", ui.YELLOW)).strip().lower() == "yes":
                     delete_entry(entries, service, username)
                     save(record, entries, key)
                     ui.success("deleted.")
+                else:
+                    print("not deleted.")  # it used to just go quiet, so i couldn't tell if it worked
 
             elif choice == "6":
                 ui.accounts(search(entries))
@@ -157,6 +177,8 @@ def main():
 
         except (EntryExists, EntryNotFound, ValueError) as e:
             ui.error(str(e))
+        except Cancelled:
+            print("cancelled.")
 
     print("locked. bye.")
 
