@@ -41,6 +41,15 @@ def test_file_is_owner_only(path):
     assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
 
 
+# a leftover tmp from an old crash with loose permissions shouldn't make the vault readable
+def test_stale_tmp_doesnt_loosen_permissions(path):
+    with open(path + ".tmp", "w") as f:
+        f.write("leftover")
+    os.chmod(path + ".tmp", 0o644)
+    save_record(RECORD, path)
+    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+
+
 # saving over an old vault replaces it cleanly and doesn't leave a temp file lying around
 def test_overwrite_leaves_no_tmp_file(path):
     save_record(RECORD, path)

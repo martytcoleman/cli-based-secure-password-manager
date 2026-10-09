@@ -31,8 +31,13 @@ def load_record(path: str = STORAGE_PATH) -> dict:
 def save_record(record: dict, path: str = STORAGE_PATH) -> None:
     """write to a temp file first, then swap it in, so a crash mid-save can't wreck the vault"""
     tmp = path + ".tmp"
-    # 0o600 = only my user can read/write. set at creation so it's never readable by others, even briefly
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    # a leftover tmp from an old crash could have looser permissions (or be a symlink), so clear it first
+    try:
+        os.remove(tmp)
+    except FileNotFoundError:
+        pass
+    # 0o600 = only my user can read/write. O_EXCL means "must be a brand new file", so 0o600 always sticks
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(record, f, indent=2)
         f.flush()
