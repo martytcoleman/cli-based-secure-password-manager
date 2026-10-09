@@ -21,6 +21,8 @@ A command-line password manager I built for COSC 55 (Security and Privacy). Ever
 - A short-password warning when you type in a password under 12 characters
 - A simple color pass (green = worked, red = error, yellow = careful), kept in its own file
 
+
+
 ## Setup
 
 Needs Python 3.10+ (I built it on 3.13).
@@ -32,6 +34,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r password_manager/requirements.txt
 ```
+
+
 
 ## Usage
 
@@ -168,6 +172,8 @@ python -m pytest -v
 - the saved file is exactly `600` and never contains the master password
 - the generator always includes every character type, never repeats, and isn't using `random`
 
+
+
 ## What I'd add next
 
 - Auto-lock after inactivity (the other optional feature from the assignment)
@@ -177,7 +183,8 @@ python -m pytest -v
 - Rejecting master passwords from a list of common passwords
 - Covering the salts, iterations and verifier with an HMAC too, so tampering with them is reported as tampering instead of a wrong password
 
+
+
 ## AI Tooling Disclosure
 
-I used Claude Code to brainstorm test cases, identify potential weaknesses in my code, assist with the implementation of the colorful terminal UI, and clarify concepts and design decisions through discussion. I understand the AI-assisted work and can explain its functionality and design.
-
+I used Claude Code to brainstorm and run test cases, identify potential security weaknesses, assist in developing/refining portions of the code, and implement the colorful terminal UI. I also used it to clarify concepts and design decisions through discussion and polish this README. I reviewed the AI-assisted work and can explain its functionality and design.
